@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Murdoku - Museo del Prado</title>
+<style>
+*{box-sizing:border-box}
+
+body{
+ margin:0;
+ background:#25251f;
+ color:#f5ead5;
+ font-family:Georgia,serif;
+}
+
+header{
+ text-align:center;
+ padding:25px;
+ background:#26382d;
+ border-bottom:4px solid #b99a65;
+}
+header h1{margin:0;font-size:30px}
+header p{color:#e1d1ad}
+
+main{max-width:1100px;margin:auto;padding:18px}
+
+.panel{
+ background:#30362e;
+ border:1px solid #686b50;
+ border-radius:12px;
+ padding:18px;
+ margin-bottom:18px;
+}
+
+h2{color:#e3c58b}
+
+.characters{
+ display:flex;
+ gap:10px;
+ flex-wrap:wrap;
+}
+
+.character{
+ flex:1;
+ min-width:110px;
+ padding:12px;
+ text-align:center;
+ background:#46503c;
+ color:white;
+ border:2px solid #8e9575;
+ border-radius:8px;
+ cursor:grab;
+ user-select:none;
+}
+.character.selected{
+ border:3px solid #e9bc60;
+ background:#69542e;
+}
+.character.placed{opacity:.65}
+.emoji{display:block;font-size:27px;margin-bottom:5px}
+
+#status{color:#e9c77e;min-height:35px;padding:8px 0}
+
+button{
+ background:#c1a06b;
+ color:#282117;
+ border:0;
+ border-radius:7px;
+ padding:11px 15px;
+ margin:4px;
+ cursor:pointer;
+ font-weight:bold;
+}
+button:hover{background:#e6c68b}
+.secondary{background:#56664e;color:white}
+
+.legend{
+ display:flex;
+ flex-wrap:wrap;
+ gap:12px;
+ margin:12px 0;
+ font:12px Arial;
+}
+.legend span{display:flex;align-items:center;gap:5px}
+.swatch{width:16px;height:16px;border:1px solid #84745d}
+
+/* PLANO */
+
+.map-scroll{
+ overflow-x:auto;
+ padding:12px 4px 18px;
+}
+
+.map-frame{
+ min-width:790px;
+ background:#493c2d;
+ border:9px solid #a98a5b;
+ padding:8px;
+ box-shadow:0 5px 18px #0008;
+}
+
+.map-heading{
+ text-align:center;
+ color:#e7d5ac;
+ letter-spacing:4px;
+ padding:9px;
+ font-size:15px;
+}
+
+.map{
+ display:grid;
+ grid-template-columns:repeat(12,1fr);
+ grid-template-rows:repeat(8,75px);
+ gap:0;
+ background:#796548;
+ border:5px solid #57452e;
+}
+
+.cell{
+ position:relative;
+ min-width:0;
+ display:flex;
+ flex-direction:column;
+ justify-content:center;
+ align-items:center;
+ cursor:pointer;
+ overflow:hidden;
+ border:1px solid #c3a77d;
+ color:#57442e;
+ transition:background .15s;
+}
+
+/* Colores de suelo */
+.sala1{background:#e8d7b8}
+.sala2{background:#dfc49d}
+.sala3{background:#e9e0ce}
+.sala4{background:#d9c9a9}
+.pasillo{background:#bca47d}
+.acceso{background:#8b795d}
+
+/* PAREDES */
+.cell.wall-top{border-top:5px solid #65472d}
+.cell.wall-bottom{border-bottom:5px solid #65472d}
+.cell.wall-left{border-left:5px solid #65472d}
+.cell.wall-right{border-right:5px solid #65472d}
+
+/* Puertas */
+.cell.door{
+ background:#ad8c5b;
+}
+.door-mark{
+ font-size:15px;
+ color:#513d27;
+ position:absolute;
+ z-index:1;
+}
+
+/* Decoración */
+.zone{
+ font: bold 9px Arial;
+ text-align:center;
+ background:#f2e7d2c9;
+ padding:3px;
+ border:1px solid #9b8059;
+ border-radius:3px;
+ z-index:1;
+}
+
+.decoration{
+ font-size:22px;
+ opacity:.85;
+ pointer-events:none;
+ line-height:1;
+}
+
+.decor-label{
+ font:8px Arial;
+ color:#756044;
+ pointer-events:none;
+}
+
+.coordinate{
+ position:absolute;
+ top:3px;
+ left:3px;
+ font:8px Arial;
+ color:#806c4e;
+ opacity:.8;
+ pointer-events:none;
+}
+
+.person{
+ position:absolute;
+ z-index:4;
+ background:#334b39;
+ color:white;
+ border:2px solid #d8b36e;
+ border-radius:6px;
+ padding:5px 2px;
+ width:92%;
+ text-align:center;
+ font:bold 10px Arial;
+ box-shadow:0 2px 4px #0005;
+ overflow-wrap:anywhere;
+}
+
+.cell.occupied{background:#d9c69e}
+.cell.selected-cell{outline:3px solid #e3a83c;z-index:5}
+.cell:hover{filter:brightness(1.08);z-index:3}
+
+.map-footer{
+ text-align:center;
+ color:#e6d4ae;
+ padding:10px;
+ letter-spacing:3px;
+ font-size:12px;
+}
+
+.blocked{
+    cursor: not-allowed !important;
+    opacity: 0.8;
+}
+
+#result{line-height:1.6}
+.clue{padding:9px 0;border-bottom:1px solid #62634c}
+
+@media(max-width:600px){
+ main{padding:9px}
+ .panel{padding:12px}
+ header h1{font-size:23px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+ <h1>EL MISTERIO DEL PRADO</h1>
+ <p>Madrid · 21:00 horas · La noche del crimen</p>
+</header>
+
+<main>
+
+<section class="panel">
+ <h2>La investigación</h2>
+ <p>
+ El conservador del Museo del Prado ha sido asesinado.
+ Cuatro sospechosos se encontraban en el edificio.
+ Reconstruye sus movimientos sobre el plano del museo.
+ </p>
+ <p>Selecciona un personaje y pulsa una casilla para colocarlo.
+ También puedes arrastrar las fichas.</p>
+</section>
+
+<section class="panel">
+ <h2>1. Sospechosos</h2>
+ <div class="characters">
+  <div class="character" draggable="true" data-name="Velázquez">
+   <span class="emoji">🎨</span>Velázquez
+  </div>
+  <div class="character" draggable="true" data-name="Goya">
+   <span class="emoji">🖌️</span>Goya
+  </div>
+  <div class="character" draggable="true" data-name="El Greco">
+   <span class="emoji">🧑‍🎨</span>El Greco
+  </div>
+  <div class="character" draggable="true" data-name="Rubens">
+   <span class="emoji">🖼️</span>Rubens
+  </div>
+ </div>
+ <div id="status">Selecciona un personaje.</div>
+ <button class="secondary" onclick="removeCharacter()">Retirar personaje</button>
+ <button class="secondary" onclick="resetMap()">Reiniciar mapa</button>
+</section>
+
+<section class="panel">
+ <h2>2. Plano del Museo del Prado</h2>
+
+ <div class="legend">
+  <span><i class="swatch" style="background:#e8d7b8"></i>Galería Velázquez</span>
+  <span><i class="swatch" style="background:#dfc49d"></i>Sala Goya</span>
+  <span><i class="swatch" style="background:#e9e0ce"></i>Galería norte</span>
+  <span><i class="swatch" style="background:#d9c9a9"></i>Galería sur</span>
+  <span><i class="swatch" style="background:#bca47d"></i>Pasillos</span>
+ </div>
+
+ <div class="map-scroll">
+  <div class="map-frame">
+   <div class="map-heading">✦ MUSEO NACIONAL DEL PRADO ✦</div>
+   <div class="map" id="map"></div>
+   <div class="map-footer">GALERÍAS · EXPOSICIONES · COLECCIÓN PERMANENTE</div>
+  </div>
+ </div>
+
+ <p style="font-size:12px;color:#d3c5a5">
+  🖼️ Cuadros · 🏛️ Columnas · 🗿 Esculturas · 🪑 Bancos ·
+  🚪 Puertas. Las casillas siguen siendo seleccionables.
+ </p>
+</section>
+
+<section class="panel">
+ <h2>3. Pistas</h2>
+ <div class="clue">1. Rubens estaba en la galería de Las Meninas.</div>
+ <div class="clue">2. Goya fue visto cerca de la galería privada.</div>
+ <div class="clue">3. El Greco estaba en el sector sur.</div>
+ <div class="clue">4. Velázquez estaba en la galería norte.</div>
+ <div class="clue">5. El crimen ocurrió en la sala de Goya.</div>
+</section>
+
+<section class="panel">
+ <h2>4. Comprobar investigación</h2>
+ <button onclick="checkMap()">Comprobar posiciones</button>
+ <p id="result" aria-live="polite"></p>
+</section>
+
+</main>
+
+<script>
+const W=12,H=8;
+
+const people=["Velázquez","Goya","El Greco","Rubens"];
+
+const icons={
+ "Velázquez":"🎨",
+ "Goya":"🖌️",
+ "El Greco":"🧑‍🎨",
+ "Rubens":"🖼️"
+};
+
+const zones=[
+ {name:"GALERÍA VELÁZQUEZ",x1:0,x2:3,y1:0,y2:2,type:"sala1"},
+ {name:"GALERÍA NORTE",x1:4,x2:7,y1:0,y2:2,type:"sala3"},
+ {name:"SALA GOYA",x1:8,x2:11,y1:0,y2:2,type:"sala2"},
+ {name:"PASILLO CENTRAL",x1:0,x2:11,y1:3,y2:3,type:"pasillo"},
+ {name:"GALERÍA SUR",x1:0,x2:3,y1:4,y2:7,type:"sala4"},
+ {name:"SALA EL GRECO",x1:4,x2:7,y1:4,y2:7,type:"sala3"},
+ {name:"GALERÍA RUBENS",x1:8,x2:11,y1:4,y2:7,type:"sala1"}
+];
+
+const solution={
+ "Velázquez":"F2",
+ "Goya":"J2",
+ "El Greco":"F6",
+ "Rubens":"B2"
+};
+
+const decorations={
+ "A1":["🖼️","Las Meninas"],
+ "C1":["🏛️","Columna"],
+ "F1":["🖼️","Pintura"],
+ "G2":["🪑","Banco"],
+ "I1":["🖼️","Cuadro"],
+ "K1":["🏛️","Columna"],
+ "B2":["🗿","Hermafrodita"],
+ "D2":["🖼️","Felipe IV"],
+ "I2":["🪑","Banco"],
+ "L2":["🖼️","Cuadro"],
+ "A4":["🏛️","Columna"],
+ "F4":["🪑","Banco"],
+ "K4":["🏛️","Columna"],
+ "B5":["🖼️","Cuadro"],
+ "D6":["🗿","Escultura"],
+ "F7":["🖼️","Pintura"],
+ "I6":["🪑","Banco"],
+ "K7":["🖼️","Cuadro"],
+ "L8":["🏛️","Columna"]
+};
+
+const doorCoords=["D4","E4","H4","I4"];
+
+const positions={};
+let selected=null;
+
+const map=document.getElementById("map");
+const status=document.getElementById("status");
+
+function zoneAt(x,y){
+ return zones.find(z=>
+  x>=z.x1 && x<=z.x2 &&
+  y>=z.y1 && y<=z.y2
+ );
+}
+
+function coord(x,y){
+ return String.fromCharCode(65+x)+(y+1);
+}
+
+const casillasBloqueadas = [
+    "A1", "A4", "C1", "F1", "I1", "K1", "B2", "D2", "G2", 
+    "I2", "L2", "A1", "D4", "E4", "F4", "H4", "I4", 
+    "K4", "B5", "D6", "I6", "F7", "K7", "L8"
+]
+
+function buildMap(){
+ map.innerHTML="";
+
+ for(let y=0;y<H;y++){
+  for(let x=0;x<W;x++){
+   const name=coord(x,y);
+   const zone=zoneAt(x,y);
+   const cell=document.createElement("div");
+   if(casillasBloqueadas.includes(name)){
+    cell.classList.add("blocked");
+    cell.style.pointerEvents = "none";
+   }
+
+   cell.className="cell "+zone.type;
+   cell.dataset.coord=name;
+
+   // Límites exteriores y paredes entre sectores.
+   const top=zoneAt(x,y-1);
+   const bottom=zoneAt(x,y+1);
+   const left=zoneAt(x-1,y);
+   const right=zoneAt(x+1,y);
+
+   if(!top || top!==zone) cell.classList.add("wall-top");
+   if(!bottom || bottom!==zone) cell.classList.add("wall-bottom");
+   if(!left || left!==zone) cell.classList.add("wall-left");
+   if(!right || right!==zone) cell.classList.add("wall-right");
+
+   if(doorCoords.includes(name)){
+    cell.classList.add("door");
+    const door=document.createElement("span");
+    door.className="door-mark";
+    door.textContent="🚪";
+    cell.appendChild(door);
+   }
+
+   const c=document.createElement("span");
+   c.className="coordinate";
+   c.textContent=name;
+   cell.appendChild(c);
+
+   // Nombre de sala
+   if(x===zone.x1 && y===zone.y1){
+    const label=document.createElement("span");
+    label.className="zone";
+    label.textContent=zone.name;
+    cell.appendChild(label);
+   }
+
+   // Elementos decorativos
+   if(decorations[name]){
+    const decoration=document.createElement("span");
+    decoration.className="decoration";
+    decoration.textContent=decorations[name][0];
+    cell.appendChild(decoration);
+    const description=document.createElement("span");
+    description.className="decor-label";
+    description.textContent=decorations[name][1];
+    cell.appendChild(description);
+   }
+
+   cell.addEventListener("click",()=>handleCell(name));
+
+   cell.addEventListener("dragover",e=>e.preventDefault());
+
+   cell.addEventListener("drop",e=>{
+    e.preventDefault();
+    const person=e.dataTransfer.getData("text/plain");
+    if(person) place(person,name);
+   });
+
+   map.appendChild(cell);
+  }
+ }
+
+ render();
+}
+
+document.querySelectorAll(".character").forEach(card=>{
+ const person=card.dataset.name;
+
+ card.addEventListener("click",()=>select(person));
+
+ card.addEventListener("dragstart",e=>{
+  e.dataTransfer.setData("text/plain",person);
+  selected=person;
+  render();
+ });
+});
+
+function select(person){
+ selected=person;
+ status.textContent="Seleccionado: "+person+". Elige una casilla.";
+ render();
+}
+
+function handleCell(name){
+ if(selected){
+  place(selected,name);
+ }else if(positions[name]){
+  select(positions[name]);
+ }else{
+  status.textContent="Casilla "+name+" vacía. Selecciona un personaje.";
+ }
+}
+
+function place(person,name){
+ // Quitar de la ubicación anterior.
+ Object.keys(positions).forEach(k=>{
+  if(positions[k]===person) delete positions[k];
+ });
+
+ // No permitir compartir casilla.
+ if(positions[name]){
+  status.textContent="Esta casilla ya está ocupada.";
+  render();
+  return;
+ }
+
+ positions[name]=person;
+ selected=null;
+ status.textContent=person+" colocado en "+name+".";
+ document.getElementById("result").textContent="";
+ render();
+}
+
+function render(){
+ document.querySelectorAll(".cell").forEach(cell=>{
+  const name=cell.dataset.coord;
+  const person=positions[name];
+
+  cell.querySelectorAll(".person").forEach(p=>p.remove());
+
+  cell.classList.toggle("occupied",!!person);
+
+  if(person){
+   const p=document.createElement("div");
+   p.className="person";
+   p.textContent=icons[person]+" "+person;
+   cell.appendChild(p);
+  }
+ });
+
+ document.querySelectorAll(".character").forEach(card=>{
+  card.classList.toggle("selected",card.dataset.name===selected);
+  card.classList.toggle(
+   "placed",Object.values(positions).includes(card.dataset.name)
+  );
+ });
+}
+
+function removeCharacter(){
+ if(!selected){
+  status.textContent="Selecciona primero un personaje.";
+  return;
+ }
+
+ Object.keys(positions).forEach(k=>{
+  if(positions[k]===selected) delete positions[k];
+ });
+
+ status.textContent=selected+" retirado.";
+ selected=null;
+ render();
+}
+
+function resetMap(){
+ Object.keys(positions).forEach(k=>delete positions[k]);
+ selected=null;
+ status.textContent="Mapa reiniciado.";
+ document.getElementById("result").textContent="";
+ render();
+}
+
+function checkMap(){
+ const result=document.getElementById("result");
+
+ if(Object.keys(positions).length!==4){
+  result.textContent="Coloca a los cuatro personajes.";
+  return;
+ }
+
+ let correct=0;
+
+ people.forEach(person=>{
+  const position=Object.keys(positions).find(
+   key=>positions[key]===person
+  );
+  if(position===solution[person]) correct++;
+ });
+
+ result.textContent=correct===4
+  ?"🏆 ¡Perfecto! Has reconstruido las cuatro posiciones."
+  :"🔎 "+correct+"/4 personajes están en la posición correcta. Sigue investigando.";
+}
+
+buildMap();
+</script>
+
+</body>
+</html>
