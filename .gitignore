@@ -1,0 +1,40 @@
+
+# Dependencias
+node_modules/
+
+# Compilaciones
+dist/
+build/
+
+# Cachés
+.vite/
+.cache/
+.parcel-cache/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Informes de pruebas
+coverage/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos del editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Registros
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Archivos temporales
+*.tmp
+*.temp
